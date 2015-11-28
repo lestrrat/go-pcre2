@@ -56,6 +56,19 @@ func strToRuneArray(s string) ([]rune, error) {
 	return rs, nil
 }
 
+func bytesToRuneArray(b []byte) ([]rune, error) {
+	rs := []rune{}
+	for len(b) > 0 {
+		r, n := utf8.DecodeRune(b)
+		if r == utf8.RuneError {
+			return nil, ErrInvalidUTF8String
+		}
+		b = b[n:]
+		rs = append(rs, r)
+	}
+	return rs, nil
+}
+
 func Compile(pattern string) (*Regexp, error) {
 	patc, err := strToRuneArray(pattern)
 	if err != nil {
@@ -105,13 +118,24 @@ func (r *Regexp) Free() error {
 	return nil
 }
 
-func (r *Regexp) MatchString(s string) bool {
-	rptr, err := r.validRegexpPtr()
+func (r *Regexp) Match(b []byte) bool {
+	rs, err := bytesToRuneArray(b)
 	if err != nil {
 		return false
 	}
+	return r.matchRuneArray(rs)
+}
 
-	sc, err := strToRuneArray(s)
+func (r *Regexp) MatchString(s string) bool {
+	rs, err := strToRuneArray(s)
+	if err != nil {
+		return false
+	}
+	return r.matchRuneArray(rs)
+}
+
+func (r *Regexp) matchRuneArray(rs []rune) bool {
+	rptr, err := r.validRegexpPtr()
 	if err != nil {
 		return false
 	}
@@ -121,8 +145,8 @@ func (r *Regexp) MatchString(s string) bool {
 
 	rc := C.pcre2_match(
 		rptr,
-		(C.PCRE2_SPTR)(unsafe.Pointer(&sc[0])),
-		C.size_t(len(sc)),
+		(C.PCRE2_SPTR)(unsafe.Pointer(&rs[0])),
+		C.size_t(len(rs)),
 		0,
 		0,
 		match_data,
@@ -131,11 +155,3 @@ func (r *Regexp) MatchString(s string) bool {
 
 	return int(rc) >= 0
 }
-
-//re = pcre2_compile(
-//  pattern,               /* the pattern */
-//  PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
-//  0,                     /* default options */
-//  &errornumber,          /* for error number */
-//  &erroroffset,          /* for error offset */
-//  NULL);                 /* use default compile context */
