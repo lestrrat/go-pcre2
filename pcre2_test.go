@@ -48,3 +48,27 @@ func TestBasic(t *testing.T) {
 		}
 	}
 }
+
+func TestFindAllSubmatchIndex(t *testing.T) {
+	re, err := pcre2.Compile(`^(\S+) (\S+) (\S+)$`)
+	if !assert.NoError(t, err, "Compile works") {
+		return
+	}
+	defer re.Free()
+
+	data := map[string][][]int{
+		`Alice Bob Charlie`: [][]int{[]int{0, 17}, []int{0, 5}, []int{6, 9}, []int{10, 17}},
+		`桃 栗 柿`:             [][]int{[]int{0, 5}, []int{0, 1}, []int{2, 3}, []int{4, 5}},
+		`vini vidi vici`:    [][]int{[]int{0, 14}, []int{0, 4}, []int{5, 9}, []int{10, 14}},
+	}
+	for subject, expected := range data {
+		ret := re.FindAllSubmatchIndex([]byte(subject), 0)
+		if !assert.NotEmpty(t, ret, "Match should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, expected, ret, "indices should match") {
+			return
+		}
+	}
+}

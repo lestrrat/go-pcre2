@@ -20,6 +20,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -123,7 +124,7 @@ func (r *Regexp) Match(b []byte) bool {
 	if err != nil {
 		return false
 	}
-	return r.matchRuneArray(rs)
+	return r.matchRuneArray(rs, nil) >= 0
 }
 
 func (r *Regexp) MatchString(s string) bool {
@@ -131,17 +132,19 @@ func (r *Regexp) MatchString(s string) bool {
 	if err != nil {
 		return false
 	}
-	return r.matchRuneArray(rs)
+	return r.matchRuneArray(rs, nil) >= 0
 }
 
-func (r *Regexp) matchRuneArray(rs []rune) bool {
+func (r *Regexp) matchRuneArray(rs []rune, matchData *C.pcre2_match_data) int {
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
-		return false
+		return -1
 	}
 
-	match_data := C.pcre2_match_data_create_from_pattern(rptr, nil)
-	defer C.pcre2_match_data_free(match_data)
+	if matchData == nil {
+		matchData = C.pcre2_match_data_create_from_pattern(rptr, nil)
+		defer C.pcre2_match_data_free(matchData)
+	}
 
 	rc := C.pcre2_match(
 		rptr,
@@ -149,9 +152,44 @@ func (r *Regexp) matchRuneArray(rs []rune) bool {
 		C.size_t(len(rs)),
 		0,
 		0,
-		match_data,
+		matchData,
 		nil,
 	)
 
-	return int(rc) >= 0
+	return int(rc)
+}
+
+func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
+	rs, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+
+	rptr, err := r.validRegexpPtr()
+	if err != nil {
+		return nil
+	}
+
+	matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
+	defer C.pcre2_match_data_free(matchData)
+
+	count := r.matchRuneArray(rs, matchData)
+	if count <= 0 {
+		return nil
+	}
+
+	ovector := C.pcre2_get_ovector_pointer(matchData)
+	hdr := reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(ovector)),
+		Len:  count * 2,
+		Cap:  count * 2,
+	}
+	ovecgo := *(*[]C.size_t)(unsafe.Pointer(&hdr))
+
+	out := make([][]int, 0, count - 1)
+	for i := 0; i < count; i++ {
+		out = append(out, []int{int(ovecgo[2*i]), int(ovecgo[2*i+1])})
+	}
+
+	return out
 }
