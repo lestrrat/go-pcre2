@@ -124,7 +124,7 @@ func (r *Regexp) Match(b []byte) bool {
 	if err != nil {
 		return false
 	}
-	return r.matchRuneArray(rs, nil) >= 0
+	return r.matchRuneArray(rs, 0, 0, nil) >= 0
 }
 
 func (r *Regexp) MatchString(s string) bool {
@@ -132,10 +132,10 @@ func (r *Regexp) MatchString(s string) bool {
 	if err != nil {
 		return false
 	}
-	return r.matchRuneArray(rs, nil) >= 0
+	return r.matchRuneArray(rs, 0, 0, nil) >= 0
 }
 
-func (r *Regexp) matchRuneArray(rs []rune, matchData *C.pcre2_match_data) int {
+func (r *Regexp) matchRuneArray(rs []rune, offset int, options int, matchData *C.pcre2_match_data) int {
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
 		return -1
@@ -150,8 +150,8 @@ func (r *Regexp) matchRuneArray(rs []rune, matchData *C.pcre2_match_data) int {
 		rptr,
 		(C.PCRE2_SPTR)(unsafe.Pointer(&rs[0])),
 		C.size_t(len(rs)),
-		0,
-		0,
+		(C.PCRE2_SIZE)(offset),
+		(C.uint32_t)(options),
 		matchData,
 		nil,
 	)
@@ -159,7 +159,56 @@ func (r *Regexp) matchRuneArray(rs []rune, matchData *C.pcre2_match_data) int {
 	return int(rc)
 }
 
-func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
+func pcre2GetOvectorPointer(matchData *C.pcre2_match_data, howmany int) []C.size_t {
+	ovector := C.pcre2_get_ovector_pointer(matchData)
+	// Note that by doing this SliceHeader maigc, we allow Go
+	// slice syntax but Go doesn't own the underlying pointer.
+	// We need to free it. In this case, it means the caller
+	// must remember to free matchData
+	hdr := reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(ovector)),
+		Len:  howmany * 2,
+		Cap:  howmany * 2,
+	}
+	return *(*[]C.size_t)(unsafe.Pointer(&hdr))
+}
+
+func (r *Regexp) HasOption(opt int) bool {
+	rptr, err := r.validRegexpPtr()
+	if err != nil {
+		return false
+	}
+
+	var i C.uint32_t
+	C.pcre2_pattern_info(rptr, C.PCRE2_INFO_ALLOPTIONS, unsafe.Pointer(&i))
+	return (uint32(i) & uint32(opt)) != 0
+}
+
+func (r *Regexp) isCRLFValid() bool {
+	rptr, err := r.validRegexpPtr()
+	if err != nil {
+		return false
+	}
+
+	var i C.uint32_t
+	C.pcre2_pattern_info(rptr, C.PCRE2_INFO_NEWLINE, unsafe.Pointer(&i))
+	switch i {
+	case C.PCRE2_NEWLINE_ANY, C.PCRE2_NEWLINE_CRLF, C.PCRE2_NEWLINE_ANYCRLF:
+		return true
+	}
+
+	return false
+}
+
+func byteCountInRuneArray(rs []rune) int {
+	l := 0
+	for _, r := range rs {
+		l += utf8.RuneLen(r)
+	}
+	return l
+}
+
+func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 	rs, err := bytesToRuneArray(b)
 	if err != nil {
 		return nil
@@ -170,25 +219,33 @@ func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
 		return nil
 	}
 
+	//	isUTF8 := r.HasOption(C.PCRE2_UTF)
+	//	isCRLFValid := r.isCRLFValid()
+
 	matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
 	defer C.pcre2_match_data_free(matchData)
 
-	count := r.matchRuneArray(rs, matchData)
-	if count <= 0 {
-		return nil
-	}
+	out := [][]int(nil)
+	offset := 0
+	options := 0
+	for len(rs) > 0 {
+		count := r.matchRuneArray(rs, 0, options, matchData)
+		if count <= 0 {
+			break
+		}
 
-	ovector := C.pcre2_get_ovector_pointer(matchData)
-	hdr := reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(ovector)),
-		Len:  count * 2,
-		Cap:  count * 2,
-	}
-	ovecgo := *(*[]C.size_t)(unsafe.Pointer(&hdr))
+		ovector := pcre2GetOvectorPointer(matchData, count)
+		curmatch := make([]int, 0, count)
+		for i := 1; i < count; i++ {
+			b1 := byteCountInRuneArray(rs[:int(ovector[2*i])])
+			b2 := byteCountInRuneArray(rs[:int(ovector[2*i+1])])
+			curmatch = append(curmatch, offset+b1, offset+b2)
+		}
+		offset += byteCountInRuneArray(rs[:int(ovector[1])])
 
-	out := make([][]int, 0, count - 1)
-	for i := 0; i < count; i++ {
-		out = append(out, []int{int(ovecgo[2*i]), int(ovecgo[2*i+1])})
+		out = append(out, curmatch)
+
+		rs = rs[int(ovector[1]):]
 	}
 
 	return out
