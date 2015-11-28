@@ -30,7 +30,9 @@ func benchMatchString(b *testing.B, re matchStringer) {
 }
 
 func BenchmarkGoRegexpMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	benchf := func () {
+		// Forcing a function call here so that we have chance to
+		// run garbage collection for each iteration
 		re, err := regexp.Compile(`^Hello (.+)!$`)
 		if err != nil {
 			b.Errorf("compile failed: %s", err)
@@ -38,15 +40,26 @@ func BenchmarkGoRegexpMatch(b *testing.B) {
 		}
 		benchMatchString(b, re)
 	}
+
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
 }
 
 func BenchmarkPCRE2RegexpMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	benchf := func() {
+		// Forcing a function call here so that we have chance to
+		// run garbage collection for each iteration
 		re, err := pcre2.Compile(`^Hello (.+)!$`)
 		if err != nil {
 			b.Errorf("compile failed: %s", err)
 			return
 		}
+		defer re.Free()
 		benchMatchString(b, re)
+	}
+
+	for i := 0; i < b.N; i++ {
+		benchf()
 	}
 }
