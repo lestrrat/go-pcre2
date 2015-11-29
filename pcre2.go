@@ -61,7 +61,7 @@ func strToRuneArray(s string) ([]rune, []int, error) {
 
 func bytesToRuneArray(b []byte) ([]rune, []int, error) {
 	rs := []rune{} // actual runes
-	ls := []int{} // length of each rune
+	ls := []int{}  // length of each rune
 	for len(b) > 0 {
 		r, n := utf8.DecodeRune(b)
 		if r == utf8.RuneError {
@@ -215,8 +215,52 @@ func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 		return nil
 	}
 
-	//	isUTF8 := r.HasOption(C.PCRE2_UTF)
-	//	isCRLFValid := r.isCRLFValid()
+	matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
+	defer C.pcre2_match_data_free(matchData)
+
+	out := [][]int(nil)
+	offset := 0
+	options := 0
+	for len(rs) > 0 {
+		count := r.matchRuneArray(rs, 0, options, matchData)
+		if count <= 0 {
+			break
+		}
+
+		ovector := pcre2GetOvectorPointer(matchData, count)
+		ovec0 := int(ovector[0])
+		b1 := 0
+		for x := 0; x < ovec0; x++ {
+			b1 += ls[x]
+		}
+		b2 := b1
+		for x := ovec0; x < int(ovector[1]); x++ {
+			b2 += ls[x]
+		}
+		out = append(out, []int{offset + b1, offset + b2})
+		units := int(ovector[1])
+		for x := 0; x < units; x++ {
+			offset += ls[x]
+		}
+		//		out = append(out, curmatch)
+
+		rs = rs[units:]
+		ls = ls[units:]
+	}
+
+	return out
+}
+
+func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
+	rs, ls, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+
+	rptr, err := r.validRegexpPtr()
+	if err != nil {
+		return nil
+	}
 
 	matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
 	defer C.pcre2_match_data_free(matchData)
@@ -232,23 +276,25 @@ func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 
 		ovector := pcre2GetOvectorPointer(matchData, count)
 		curmatch := make([]int, 0, count)
-		for i := 1; i < count; i++ {
+		for i := 0; i < count; i++ {
+			ovec2i := int(ovector[2*i])
+
 			b1 := 0
-			for x := 0; x < int(ovector[2*i]); x++ {
+			for x := 0; x < ovec2i; x++ {
 				b1 += ls[x]
 			}
 			b2 := b1
-			for x := int(ovector[2*i]); x < int(ovector[2*i+1]); x++ {
+			for x := ovec2i; x < int(ovector[2*i+1]); x++ {
 				b2 += ls[x]
 			}
 			curmatch = append(curmatch, offset+b1, offset+b2)
 		}
+		out = append(out, curmatch)
+
 		units := int(ovector[1])
 		for x := 0; x < units; x++ {
 			offset += ls[x]
 		}
-
-		out = append(out, curmatch)
 
 		rs = rs[units:]
 		ls = ls[units:]

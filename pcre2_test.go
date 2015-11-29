@@ -51,7 +51,7 @@ func TestBasic(t *testing.T) {
 }
 
 func TestFindAllIndex(t *testing.T) {
-	pattern := `(\S+)`
+	pattern := `(\S+):(\S+)`
 	gore, err := regexp.Compile(pattern)
 	if !assert.NoError(t, err, "Compile works (Go)") {
 		return
@@ -63,10 +63,39 @@ func TestFindAllIndex(t *testing.T) {
 	}
 	defer re.Free()
 
-	data := []string{`Alice Bob Charlie`, `桃 栗 柿`, `vini vidi vici`}
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
 	for _, subject := range data {
+		t.Logf("FindAllIndex against '%s'", subject)
 		expected := gore.FindAllIndex([]byte(subject), -1)
 		ret := re.FindAllIndex([]byte(subject), -1)
+		if !assert.NotEmpty(t, ret, "Match should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, expected, ret, "indices should match") {
+			return
+		}
+	}
+}
+
+func TestFindAllSubmatchIndex(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, subject := range data {
+		t.Logf("FindAllSubmatchIndex against '%s'", subject)
+		expected := gore.FindAllSubmatchIndex([]byte(subject), -1)
+		ret := re.FindAllSubmatchIndex([]byte(subject), -1)
 		if !assert.NotEmpty(t, ret, "Match should succeed") {
 			return
 		}

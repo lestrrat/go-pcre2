@@ -5,10 +5,11 @@
 
 ```
 shoebill% go test -v -run=none -benchmem -benchtime=5s -bench .
-PASS
-BenchmarkGoRegexpMatch-4          200000         33010 ns/op       46304 B/op         89 allocs/op
-BenchmarkPCRE2RegexpMatch-4       500000         14796 ns/op        2536 B/op         64 allocs/op
-BenchmarkGoFindAllIndex-4         300000         25526 ns/op       42064 B/op         41 allocs/op
-BenchmarkPCRE2FindAllIndex-4      500000         15802 ns/op        2312 B/op         58 allocs/op
-shoebill% go test -v -run=none -bench .
+BenchmarkGoRegexpMatch-4                  300000         27113 ns/op       46304 B/op         89 allocs/op
+BenchmarkPCRE2RegexpMatch-4               500000         14108 ns/op        2536 B/op         64 allocs/op
+BenchmarkGoFindAllIndex-4                 300000         27482 ns/op       43808 B/op         52 allocs/op
+BenchmarkPCRE2FindAllIndex-4              500000         18518 ns/op        3112 B/op         64 allocs/op
+BenchmarkGoFindAllSubmatchIndex-4         300000         35004 ns/op       43808 B/op         52 allocs/op
+BenchmarkPCRE2FindAllSubmatchIndex-4      500000         20108 ns/op        3688 B/op         73 allocs/op
+ok      github.com/lestrrat/go-pcre2    54.662s
 ```
