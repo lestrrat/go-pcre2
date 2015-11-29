@@ -209,7 +209,7 @@ func (r *Regexp) FindAll(b []byte, n int) [][]byte {
 	if err != nil {
 		return nil
 	}
-	ret := [][]byte{}
+	ret := [][]byte(nil)
 	for _, is := range r.findAllIndex(rs, ls, n) {
 		ret = append(ret, b[is[0]:is[1]])
 	}
@@ -217,6 +217,10 @@ func (r *Regexp) FindAll(b []byte, n int) [][]byte {
 }
 
 func (r *Regexp) FindAllString(s string, n int) []string {
+	if n == 0 {
+		return nil
+	}
+
 	rs, ls, err := strToRuneArray(s)
 	if err != nil {
 		return nil
@@ -224,11 +228,18 @@ func (r *Regexp) FindAllString(s string, n int) []string {
 	ret := []string{}
 	for _, is := range r.findAllIndex(rs, ls, n) {
 		ret = append(ret, s[is[0]:is[1]])
+		if n > 0 && len(ret) >= n {
+			break
+		}
 	}
 	return ret
 }
 
 func (r *Regexp) findAllIndex(rs []rune, ls []int, n int) [][]int {
+	if n == 0 {
+		return nil
+	}
+
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
 		return nil
@@ -261,10 +272,13 @@ func (r *Regexp) findAllIndex(rs []rune, ls []int, n int) [][]int {
 		for x := 0; x < units; x++ {
 			offset += ls[x]
 		}
-		//		out = append(out, curmatch)
 
 		rs = rs[units:]
 		ls = ls[units:]
+
+		if n > 0 && len(out) >= n {
+			break
+		}
 	}
 
 	return out
@@ -287,6 +301,10 @@ func (r *Regexp) FindAllStringIndex(s string, n int) [][]int {
 }
 
 func (r *Regexp) findAllSubmatchIndex(rs []rune, ls []int, n int) [][]int {
+	if n == 0 {
+		return nil
+	}
+
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
 		return nil
@@ -328,6 +346,10 @@ func (r *Regexp) findAllSubmatchIndex(rs []rune, ls []int, n int) [][]int {
 
 		rs = rs[units:]
 		ls = ls[units:]
+
+		if n > 0 && len(out) >= n {
+			break
+		}
 	}
 
 	return out

@@ -72,24 +72,23 @@ func TestFindAllIndex(t *testing.T) {
 			methodName = "FindAllIndex"
 		}
 
-		var expected [][]int
-		var ret [][]int
+		for n := -1; n < 4; n++ {
+			var expected [][]int
+			var ret [][]int
 
-		for _, subject := range data {
-			t.Logf("%s against '%s'", methodName, subject)
-			if doString {
-				expected = gore.FindAllStringIndex(subject, -1)
-				ret = re.FindAllStringIndex(subject, -1)
-			} else {
-				expected = gore.FindAllIndex([]byte(subject), -1)
-				ret = re.FindAllIndex([]byte(subject), -1)
-			}
-			if !assert.NotEmpty(t, ret, "Match should succeed") {
-				return
-			}
+			for _, subject := range data {
+				t.Logf(`%s("%s", %d)`, methodName, subject, n)
+				if doString {
+					expected = gore.FindAllStringIndex(subject, n)
+					ret = re.FindAllStringIndex(subject, n)
+				} else {
+					expected = gore.FindAllIndex([]byte(subject), n)
+					ret = re.FindAllIndex([]byte(subject), n)
+				}
 
-			if !assert.Equal(t, expected, ret, "indices should match") {
-				return
+				if !assert.Equal(t, expected, ret, "indices should match") {
+					return
+				}
 			}
 		}
 	}
@@ -117,24 +116,23 @@ func TestFindAll(t *testing.T) {
 			methodName = "FindAll"
 		}
 
-		var expected interface{}
-		var ret interface{}
+		for n := -1; n < 4; n++ {
+			var expected interface{}
+			var ret interface{}
 
-		for _, subject := range data {
-			t.Logf("%s against '%s'", methodName, subject)
-			if doString {
-				expected = gore.FindAllString(subject, -1)
-				ret = re.FindAllString(subject, -1)
-			} else {
-				expected = gore.FindAll([]byte(subject), -1)
-				ret = re.FindAll([]byte(subject), -1)
-			}
-			if !assert.NotEmpty(t, ret, "Match should succeed") {
-				return
-			}
+			for _, subject := range data {
+				t.Logf(`%s("%s", %d)`, methodName, subject, n)
+				if doString {
+					expected = gore.FindAllString(subject, n)
+					ret = re.FindAllString(subject, n)
+				} else {
+					expected = gore.FindAll([]byte(subject), n)
+					ret = re.FindAll([]byte(subject), n)
+				}
 
-			if !assert.Equal(t, expected, ret, "indices should match") {
-				return
+				if !assert.Equal(t, expected, ret, "indices should match") {
+					return
+				}
 			}
 		}
 	}
@@ -162,25 +160,23 @@ func TestFindAllSubmatchIndex(t *testing.T) {
 			methodName = "FindAllIndex"
 		}
 
-		var expected [][]int
-		var ret [][]int
+		for n := -1; n < 4; n++ {
+			var expected [][]int
+			var ret [][]int
 
-		for _, subject := range data {
-			t.Logf("%s against '%s'", methodName, subject)
-			if doString {
-				expected = gore.FindAllStringSubmatchIndex(subject, -1)
-				ret = re.FindAllStringSubmatchIndex(subject, -1)
-			} else {
-				expected = gore.FindAllSubmatchIndex([]byte(subject), -1)
-				ret = re.FindAllSubmatchIndex([]byte(subject), -1)
-			}
+			for _, subject := range data {
+				t.Logf(`%s("%s", %d)`, methodName, subject, n)
+				if doString {
+					expected = gore.FindAllStringSubmatchIndex(subject, n)
+					ret = re.FindAllStringSubmatchIndex(subject, n)
+				} else {
+					expected = gore.FindAllSubmatchIndex([]byte(subject), n)
+					ret = re.FindAllSubmatchIndex([]byte(subject), n)
+				}
 
-			if !assert.NotEmpty(t, ret, "Match should succeed") {
-				return
-			}
-
-			if !assert.Equal(t, expected, ret, "indices should match") {
-				return
+				if !assert.Equal(t, expected, ret, "indices should match") {
+					return
+				}
 			}
 		}
 	}
