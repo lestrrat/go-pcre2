@@ -204,7 +204,7 @@ func (r *Regexp) isCRLFValid() bool {
 	return false
 }
 
-func (r *Regexp) Find(b []byte) []byte {
+func (r *Regexp) FindIndex(b []byte) []int {
 	rs, ls, err := bytesToRuneArray(b)
 	if err != nil {
 		return nil
@@ -214,20 +214,36 @@ func (r *Regexp) Find(b []byte) []byte {
 	if len(is) != 1 {
 		return nil
 	}
-	return b[is[0][0]:is[0][1]]
+	return is[0]
 }
 
-func (r *Regexp) FindString(s string) string {
+func (r *Regexp) Find(b []byte) []byte {
+	is := r.FindIndex(b)
+	if is == nil {
+		return nil
+	}
+	return b[is[0]:is[1]]
+}
+
+func (r *Regexp) FindStringIndex(s string) []int {
 	rs, ls, err := strToRuneArray(s)
 	if err != nil {
-		return ""
+		return nil
 	}
 
 	is := r.findAllIndex(rs, ls, 1)
 	if len(is) != 1 {
+		return nil
+	}
+	return is[0]
+}
+
+func (r *Regexp) FindString(s string) string {
+	is := r.FindStringIndex(s)
+	if is == nil {
 		return ""
 	}
-	return s[is[0][0]:is[0][1]]
+	return s[is[0]:is[1]]
 }
 
 func (r *Regexp) FindAll(b []byte, n int) [][]byte {
