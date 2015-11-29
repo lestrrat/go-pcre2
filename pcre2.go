@@ -204,6 +204,30 @@ func (r *Regexp) isCRLFValid() bool {
 	return false
 }
 
+func (r *Regexp) FindAll(b []byte, n int) [][]byte {
+	rs, ls, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+	ret := [][]byte{}
+	for _, is := range r.findAllIndex(rs, ls, n) {
+		ret = append(ret, b[is[0]:is[1]])
+	}
+	return ret
+}
+
+func (r *Regexp) FindAllString(s string, n int) []string {
+	rs, ls, err := strToRuneArray(s)
+	if err != nil {
+		return nil
+	}
+	ret := []string{}
+	for _, is := range r.findAllIndex(rs, ls, n) {
+		ret = append(ret, s[is[0]:is[1]])
+	}
+	return ret
+}
+
 func (r *Regexp) findAllIndex(rs []rune, ls []int, n int) [][]int {
 	rptr, err := r.validRegexpPtr()
 	if err != nil {

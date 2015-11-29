@@ -95,6 +95,51 @@ func TestFindAllIndex(t *testing.T) {
 	}
 }
 
+func TestFindAll(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindAllString"
+		} else {
+			methodName = "FindAll"
+		}
+
+		var expected interface{}
+		var ret interface{}
+
+		for _, subject := range data {
+			t.Logf("%s against '%s'", methodName, subject)
+			if doString {
+				expected = gore.FindAllString(subject, -1)
+				ret = re.FindAllString(subject, -1)
+			} else {
+				expected = gore.FindAll([]byte(subject), -1)
+				ret = re.FindAll([]byte(subject), -1)
+			}
+			if !assert.NotEmpty(t, ret, "Match should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, expected, ret, "indices should match") {
+				return
+			}
+		}
+	}
+}
+
 func TestFindAllSubmatchIndex(t *testing.T) {
 	pattern := `(\S+):(\S+)`
 	gore, err := regexp.Compile(pattern)
