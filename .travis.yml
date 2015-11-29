@@ -2,8 +2,7 @@ language: go
 go:
   - 1.5
   - tip
-sudo: false
-addons:
-  apt:
-    packages:
-      - libpcre3-dev
+sudo: true
+before_script:
+  - wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre2-10.20.tar.gz -O /tmp/pcre2-10.20.tar.gz
+  - cd /tmp && tar -xvzf pcre2-10.20.tar.gz && /tmp/pcre2-10.20 && ./configure --prefix=/usr && sudo make install
