@@ -204,14 +204,6 @@ func (r *Regexp) isCRLFValid() bool {
 	return false
 }
 
-func byteCountInRuneArray(rs []rune) int {
-	l := 0
-	for _, r := range rs {
-		l += utf8.RuneLen(r)
-	}
-	return l
-}
-
 func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 	rs, ls, err := bytesToRuneArray(b)
 	if err != nil {
@@ -252,7 +244,9 @@ func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 			curmatch = append(curmatch, offset+b1, offset+b2)
 		}
 		units := int(ovector[1])
-		offset += byteCountInRuneArray(rs[:units])
+		for x := 0; x < units; x++ {
+			offset += ls[x]
+		}
 
 		out = append(out, curmatch)
 
