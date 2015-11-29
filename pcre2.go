@@ -44,34 +44,38 @@ func (e ErrCompile) Error() string {
 	return fmt.Sprintf("PCRE2 compilation failed at offset %d: %s", e.offset, e.message)
 }
 
-func strToRuneArray(s string) ([]rune, error) {
+func strToRuneArray(s string) ([]rune, []int, error) {
 	rs := []rune{}
+	ls := []int{} // length of each rune
 	for len(s) > 0 {
 		r, n := utf8.DecodeRuneInString(s)
 		if r == utf8.RuneError {
-			return nil, ErrInvalidUTF8String
+			return nil, nil, ErrInvalidUTF8String
 		}
 		s = s[n:]
 		rs = append(rs, r)
+		ls = append(ls, n)
 	}
-	return rs, nil
+	return rs, ls, nil
 }
 
-func bytesToRuneArray(b []byte) ([]rune, error) {
-	rs := []rune{}
+func bytesToRuneArray(b []byte) ([]rune, []int, error) {
+	rs := []rune{} // actual runes
+	ls := []int{} // length of each rune
 	for len(b) > 0 {
 		r, n := utf8.DecodeRune(b)
 		if r == utf8.RuneError {
-			return nil, ErrInvalidUTF8String
+			return nil, nil, ErrInvalidUTF8String
 		}
 		b = b[n:]
 		rs = append(rs, r)
+		ls = append(ls, n)
 	}
-	return rs, nil
+	return rs, ls, nil
 }
 
 func Compile(pattern string) (*Regexp, error) {
-	patc, err := strToRuneArray(pattern)
+	patc, _, err := strToRuneArray(pattern)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +124,7 @@ func (r *Regexp) Free() error {
 }
 
 func (r *Regexp) Match(b []byte) bool {
-	rs, err := bytesToRuneArray(b)
+	rs, _, err := bytesToRuneArray(b)
 	if err != nil {
 		return false
 	}
@@ -128,7 +132,7 @@ func (r *Regexp) Match(b []byte) bool {
 }
 
 func (r *Regexp) MatchString(s string) bool {
-	rs, err := strToRuneArray(s)
+	rs, _, err := strToRuneArray(s)
 	if err != nil {
 		return false
 	}
@@ -209,7 +213,7 @@ func byteCountInRuneArray(rs []rune) int {
 }
 
 func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
-	rs, err := bytesToRuneArray(b)
+	rs, ls, err := bytesToRuneArray(b)
 	if err != nil {
 		return nil
 	}
@@ -237,15 +241,23 @@ func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 		ovector := pcre2GetOvectorPointer(matchData, count)
 		curmatch := make([]int, 0, count)
 		for i := 1; i < count; i++ {
-			b1 := byteCountInRuneArray(rs[:int(ovector[2*i])])
-			b2 := byteCountInRuneArray(rs[:int(ovector[2*i+1])])
+			b1 := 0
+			for x := 0; x < int(ovector[2*i]); x++ {
+				b1 += ls[x]
+			}
+			b2 := b1
+			for x := int(ovector[2*i]); x < int(ovector[2*i+1]); x++ {
+				b2 += ls[x]
+			}
 			curmatch = append(curmatch, offset+b1, offset+b2)
 		}
-		offset += byteCountInRuneArray(rs[:int(ovector[1])])
+		units := int(ovector[1])
+		offset += byteCountInRuneArray(rs[:units])
 
 		out = append(out, curmatch)
 
-		rs = rs[int(ovector[1]):]
+		rs = rs[units:]
+		ls = ls[units:]
 	}
 
 	return out
