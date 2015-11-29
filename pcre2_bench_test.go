@@ -154,6 +154,3 @@ func BenchmarkPCRE2FindAllStringSubmatchIndex(b *testing.B) {
 		benchf()
 	}
 }
-
-
-

@@ -64,16 +64,33 @@ func TestFindAllIndex(t *testing.T) {
 	defer re.Free()
 
 	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
-	for _, subject := range data {
-		t.Logf("FindAllIndex against '%s'", subject)
-		expected := gore.FindAllIndex([]byte(subject), -1)
-		ret := re.FindAllIndex([]byte(subject), -1)
-		if !assert.NotEmpty(t, ret, "Match should succeed") {
-			return
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindAllStringIndex"
+		} else {
+			methodName = "FindAllIndex"
 		}
 
-		if !assert.Equal(t, expected, ret, "indices should match") {
-			return
+		var expected [][]int
+		var ret [][]int
+
+		for _, subject := range data {
+			t.Logf("%s against '%s'", methodName, subject)
+			if doString {
+				expected = gore.FindAllStringIndex(subject, -1)
+				ret = re.FindAllStringIndex(subject, -1)
+			} else {
+				expected = gore.FindAllIndex([]byte(subject), -1)
+				ret = re.FindAllIndex([]byte(subject), -1)
+			}
+			if !assert.NotEmpty(t, ret, "Match should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, expected, ret, "indices should match") {
+				return
+			}
 		}
 	}
 }
@@ -92,49 +109,34 @@ func TestFindAllSubmatchIndex(t *testing.T) {
 	defer re.Free()
 
 	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
-	for _, subject := range data {
-		t.Logf("FindAllSubmatchIndex against '%s'", subject)
-		expected := gore.FindAllSubmatchIndex([]byte(subject), -1)
-		ret := re.FindAllSubmatchIndex([]byte(subject), -1)
-		if !assert.NotEmpty(t, ret, "Match should succeed") {
-			return
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindAllStringIndex"
+		} else {
+			methodName = "FindAllIndex"
 		}
 
-		if !assert.Equal(t, expected, ret, "indices should match") {
-			return
-		}
-	}
-}
+		var expected [][]int
+		var ret [][]int
 
-func TestFindAllStringSubmatchIndex(t *testing.T) {
-	pattern := `(\S+):(\S+)`
-	gore, err := regexp.Compile(pattern)
-	if !assert.NoError(t, err, "Compile works (Go)") {
-		return
-	}
+		for _, subject := range data {
+			t.Logf("%s against '%s'", methodName, subject)
+			if doString {
+				expected = gore.FindAllStringSubmatchIndex(subject, -1)
+				ret = re.FindAllStringSubmatchIndex(subject, -1)
+			} else {
+				expected = gore.FindAllSubmatchIndex([]byte(subject), -1)
+				ret = re.FindAllSubmatchIndex([]byte(subject), -1)
+			}
 
-	re, err := pcre2.Compile(pattern)
-	if !assert.NoError(t, err, "Compile works (pcre2)") {
-		return
-	}
-	defer re.Free()
+			if !assert.NotEmpty(t, ret, "Match should succeed") {
+				return
+			}
 
-	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
-	for _, subject := range data {
-		t.Logf("FindAllStringSubmatchIndex against '%s'", subject)
-		expected := gore.FindAllStringSubmatchIndex(subject, -1)
-		ret := re.FindAllStringSubmatchIndex(subject, -1)
-		if !assert.NotEmpty(t, ret, "Match should succeed") {
-			return
-		}
-
-		if !assert.Equal(t, expected, ret, "indices should match") {
-			return
+			if !assert.Equal(t, expected, ret, "indices should match") {
+				return
+			}
 		}
 	}
 }
-
-
-
-
-
