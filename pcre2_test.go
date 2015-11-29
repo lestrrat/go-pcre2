@@ -50,6 +50,48 @@ func TestBasic(t *testing.T) {
 	}
 }
 
+func TestFind(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindString"
+		} else {
+			methodName = "Find"
+		}
+
+		var expected interface{}
+		var ret interface{}
+
+		for _, subject := range data {
+			t.Logf(`%s("%s")`, methodName, subject)
+			if doString {
+				expected = gore.FindString(subject)
+				ret = re.FindString(subject)
+			} else {
+				expected = gore.Find([]byte(subject))
+				ret = re.Find([]byte(subject))
+			}
+
+			if !assert.Equal(t, expected, ret, "returned byte sequence should match") {
+				return
+			}
+		}
+	}
+}
+
 func TestFindAllIndex(t *testing.T) {
 	pattern := `(\S+):(\S+)`
 	gore, err := regexp.Compile(pattern)
