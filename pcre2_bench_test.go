@@ -11,6 +11,7 @@ type regexper interface {
 	MatchString(string) bool
 	FindAllIndex([]byte, int) [][]int
 	FindAllSubmatchIndex([]byte, int) [][]int
+	FindAllStringSubmatchIndex(string, int) [][]int
 }
 
 func benchMatchString(b *testing.B, re regexper) {
@@ -47,6 +48,18 @@ func benchFindAllSubmatchIndex(b *testing.B, re regexper) {
 	patterns := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
 	for _, pat := range patterns {
 		matches := re.FindAllSubmatchIndex([]byte(pat), -1)
+		if len(matches) != 3 {
+			b.Errorf("Expected to match '%s' against '%#v', got %d", pat, re, len(matches))
+			b.Logf("%#v", matches)
+			return
+		}
+	}
+}
+
+func benchFindAllStringSubmatchIndex(b *testing.B, re regexper) {
+	patterns := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, pat := range patterns {
+		matches := re.FindAllStringSubmatchIndex(pat, -1)
 		if len(matches) != 3 {
 			b.Errorf("Expected to match '%s' against '%#v', got %d", pat, re, len(matches))
 			b.Logf("%#v", matches)
@@ -126,5 +139,21 @@ func BenchmarkPCRE2FindAllSubmatchIndex(b *testing.B) {
 		benchf()
 	}
 }
+
+const FindAllStringSubmatchIndexRegex = `(\S+):(\S+)`
+func BenchmarkGoFindAllStringSubmatchIndex(b *testing.B) {
+	benchf := makeGoBenchFunc(b, FindAllStringSubmatchIndexRegex, benchFindAllStringSubmatchIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
+func BenchmarkPCRE2FindAllStringSubmatchIndex(b *testing.B) {
+	benchf := makePCRE2BenchFunc(b, FindAllStringSubmatchIndexRegex, benchFindAllStringSubmatchIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
 
 

@@ -251,12 +251,7 @@ func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
 	return out
 }
 
-func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
-	rs, ls, err := bytesToRuneArray(b)
-	if err != nil {
-		return nil
-	}
-
+func (r *Regexp) findAllSubmatchIndex(rs []rune, ls []int, n int) [][]int {
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
 		return nil
@@ -302,3 +297,20 @@ func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
 
 	return out
 }
+
+func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
+	rs, ls, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+	return r.findAllSubmatchIndex(rs, ls, n)
+}
+
+func (r *Regexp) FindAllStringSubmatchIndex(s string, n int) [][]int {
+	rs, ls, err := strToRuneArray(s)
+	if err != nil {
+		return nil
+	}
+	return r.findAllSubmatchIndex(rs, ls, n)
+}
+
