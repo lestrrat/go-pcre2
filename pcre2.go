@@ -3,16 +3,17 @@ package pcre2
 /*
 #define PCRE2_CODE_UNIT_WIDTH 32
 #cgo pkg-config: libpcre2-32
+#include <stdio.h>
 #include <stdlib.h>
 #include <pcre2.h>
 
 #define MY_PCRE2_ERROR_MESSAGE_BUF_LEN 256
 static
-char *
-MY_pcre2_get_error_message(int errno) {
+void *
+MY_pcre2_get_error_message(int errnum) {
 	PCRE2_UCHAR *buf = (PCRE2_UCHAR *) malloc(sizeof(PCRE2_UCHAR) * MY_PCRE2_ERROR_MESSAGE_BUF_LEN);
-  pcre2_get_error_message(errno, buf, MY_PCRE2_ERROR_MESSAGE_BUF_LEN);
-	return (char *) buf;
+  pcre2_get_error_message(errnum, buf, MY_PCRE2_ERROR_MESSAGE_BUF_LEN);
+	return buf;
 }
 
 */
@@ -91,12 +92,14 @@ func Compile(pattern string) (*Regexp, error) {
 		nil,
 	)
 	if re == nil {
-		// note: malloc'ed, but Go should be able to free it
-		msg := C.MY_pcre2_get_error_message(errnum)
+		rawbytes := C.MY_pcre2_get_error_message(errnum)
+		msg := C.GoBytes(rawbytes, 32/8*256)
+		defer C.free(unsafe.Pointer(rawbytes))
+
 		return nil, ErrCompile{
 			pattern: pattern,
 			offset:  int(erroff),
-			message: C.GoString(msg),
+			message: string(msg),
 		}
 	}
 	return &Regexp{ptr: re}, nil

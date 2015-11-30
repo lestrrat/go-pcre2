@@ -10,6 +10,7 @@ import (
 
 func TestBadPattern(t *testing.T) {
 	re, err := pcre2.Compile(`^Hello [World!$`)
+	t.Logf("%s", err)
 	if !assert.Error(t, err, "Compile works") {
 		return
 	}
