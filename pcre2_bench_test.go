@@ -14,6 +14,8 @@ type regexper interface {
 	FindAllSubmatchIndex([]byte, int) [][]int
 	FindAllStringIndex(string, int) [][]int
 	FindAllStringSubmatchIndex(string, int) [][]int
+	FindSubmatchIndex([]byte) []int
+	FindStringSubmatchIndex(string) []int
 }
 
 func benchMatch(b *testing.B, re regexper, dos bool) {
@@ -58,6 +60,24 @@ func benchFindAllIndex(b *testing.B, re regexper, dos bool) {
 		}
 
 		if len(matches) != 3 {
+			b.Errorf("Expected to match '%s' against '%#v', got %d", pat, re, len(matches))
+			b.Logf("%#v", matches)
+			return
+		}
+	}
+}
+
+func benchFindSubmatchIndex(b *testing.B, re regexper, dos bool) {
+	patterns := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, pat := range patterns {
+		var matches []int
+		if dos {
+			matches = re.FindStringSubmatchIndex(pat)
+		} else {
+			matches = re.FindSubmatchIndex([]byte(pat))
+		}
+
+		if len(matches) != 6 {
 			b.Errorf("Expected to match '%s' against '%#v', got %d", pat, re, len(matches))
 			b.Logf("%#v", matches)
 			return
@@ -166,6 +186,37 @@ func BenchmarkGoFindAllStringIndex(b *testing.B) {
 
 func BenchmarkPCRE2FindAllStringIndex(b *testing.B) {
 	benchf := makeBenchFunc(b, UsePCRE2Regexp, UseString, FindAllIndexRegex, benchFindAllIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
+// FindSubmatchIndex, FindStringSubmatchIndex
+const FindSubmatchIndexRegex = `(\S+):(\S+)`
+
+func BenchmarkGoFindSubmatchIndex(b *testing.B) {
+	benchf := makeBenchFunc(b, UseGoRegexp, UseBytes, FindSubmatchIndexRegex, benchFindSubmatchIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
+func BenchmarkPCRE2FindSubmatchIndex(b *testing.B) {
+	benchf := makeBenchFunc(b, UsePCRE2Regexp, UseBytes, FindSubmatchIndexRegex, benchFindSubmatchIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
+func BenchmarkGoFindStringSubmatchIndex(b *testing.B) {
+	benchf := makeBenchFunc(b, UseGoRegexp, UseString, FindSubmatchIndexRegex, benchFindSubmatchIndex)
+	for i := 0; i < b.N; i++ {
+		benchf()
+	}
+}
+
+func BenchmarkPCRE2FindStringSubmatchIndex(b *testing.B) {
+	benchf := makeBenchFunc(b, UsePCRE2Regexp, UseString, FindSubmatchIndexRegex, benchFindSubmatchIndex)
 	for i := 0; i < b.N; i++ {
 		benchf()
 	}
