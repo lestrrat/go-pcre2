@@ -311,3 +311,87 @@ func TestFindAllSubmatch(t *testing.T) {
 	}
 }
 
+func TestFindSubmatch(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindStringSubmatch"
+		} else {
+			methodName = "FindSubmatcn"
+		}
+
+		var expected interface{}
+		var ret interface{}
+
+		for _, subject := range data {
+			t.Logf(`%s("%s")`, methodName, subject)
+			if doString {
+				expected = gore.FindStringSubmatch(subject)
+				ret = re.FindStringSubmatch(subject)
+			} else {
+				expected = gore.FindSubmatch([]byte(subject))
+				ret = re.FindSubmatch([]byte(subject))
+			}
+
+			if !assert.Equal(t, expected, ret, "indices should match") {
+				return
+			}
+		}
+	}
+}
+
+func TestFindSubmatchIndex(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindStringSubmatchIndex"
+		} else {
+			methodName = "FindSubmatcnIndex"
+		}
+
+		var expected interface{}
+		var ret interface{}
+
+		for _, subject := range data {
+			t.Logf(`%s("%s")`, methodName, subject)
+			if doString {
+				expected = gore.FindStringSubmatchIndex(subject)
+				ret = re.FindStringSubmatchIndex(subject)
+			} else {
+				expected = gore.FindSubmatchIndex([]byte(subject))
+				ret = re.FindSubmatchIndex([]byte(subject))
+			}
+
+			if !assert.Equal(t, expected, ret, "indices should match") {
+				return
+			}
+		}
+	}
+}
+

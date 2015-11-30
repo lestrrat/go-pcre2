@@ -241,6 +241,84 @@ func (r *Regexp) FindStringIndex(s string) []int {
 	return is[0]
 }
 
+func (r *Regexp) FindSubmatch(b []byte) [][]byte {
+	matches := r.FindSubmatchIndex(b)
+	if matches == nil {
+		return nil
+	}
+
+	ret := make([][]byte, 0, len(matches)/2)
+	for i := 0; i < len(matches)/2; i++ {
+		ret = append(ret, b[matches[2*i]:matches[2*i+1]])
+	}
+	return ret
+}
+
+func (r *Regexp) FindSubmatchIndex(b []byte) []int {
+	rs, ls, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+	return r.findSubmatchIndex(rs, ls)
+}
+
+func (r *Regexp) FindStringSubmatchIndex(s string) []int {
+	rs, ls, err := strToRuneArray(s)
+	if err != nil {
+		return nil
+	}
+	return r.findSubmatchIndex(rs, ls)
+}
+
+func (r *Regexp) findSubmatchIndex(rs []rune, ls []int) []int {
+  rptr, err := r.validRegexpPtr()
+  if err != nil {
+    return nil
+  }
+
+  matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
+  defer C.pcre2_match_data_free(matchData)
+
+  out := []int(nil)
+  options := 0
+
+  count := r.matchRuneArray(rs, 0, options, matchData)
+	if count <= 0 {
+		return nil
+  }
+
+	ovector := pcre2GetOvectorPointer(matchData, count)
+	for i := 0; i < count; i++ {
+		ovec0 := int(ovector[2*i])
+		b1 := 0
+		for x := 0; x < ovec0; x++ {
+			b1 += ls[x]
+		}
+
+		ovec1 := int(ovector[2*i+1])
+		b2 := b1
+		for x := ovec0; x < ovec1; x++ {
+			b2 += ls[x]
+		}
+		out = append(out, []int{b1, b2}...)
+	}
+
+	return out
+}
+
+func (r *Regexp) FindStringSubmatch(s string) []string {
+	matches := r.FindStringSubmatchIndex(s)
+	if matches == nil {
+		return nil
+	}
+
+	ret := make([]string, 0, len(matches))
+	for i := 0; i < len(matches) / 2; i++ {
+		ret = append(ret, s[matches[2*i]:matches[2*i+1]])
+	}
+	return ret
+}
+
 func (r *Regexp) FindString(s string) string {
 	is := r.FindStringIndex(s)
 	if is == nil {
