@@ -400,6 +400,59 @@ func (r *Regexp) findAllSubmatchIndex(rs []rune, ls []int, n int) [][]int {
 	return out
 }
 
+func (r *Regexp) FindAllSubmatch(b []byte, n int) [][][]byte {
+	rs, ls, err := bytesToRuneArray(b)
+	if err != nil {
+		return nil
+	}
+
+	all := r.findAllSubmatchIndex(rs, ls, n)
+	if all == nil {
+		return nil
+	}
+
+	ret := make([][][]byte, 0, len(all))
+	for _, is := range all {
+		l := len(is) / 2
+		cur := make([][]byte, 0, l)
+		for i := 0; i < l; i++ {
+			cur = append(cur, b[is[2*i]:is[2*i+1]])
+		}
+
+		ret = append(ret, cur)
+		if n > 0 && len(ret) >= n {
+			break
+		}
+	}
+	return ret
+}
+
+func (r *Regexp) FindAllStringSubmatch(s string, n int) [][]string {
+	rs, ls, err := strToRuneArray(s)
+	if err != nil {
+		return nil
+	}
+
+	all := r.findAllSubmatchIndex(rs, ls, n)
+	if all == nil {
+		return nil
+	}
+
+	ret := make([][]string, 0, len(all))
+	for _, is := range all {
+		l := len(is) / 2
+		cur := make([]string, 0, l)
+		for i := 0; i < l; i++ {
+			cur = append(cur, s[is[2*i]:is[2*i+1]])
+		}
+		ret = append(ret, cur)
+		if n > 0 && len(ret) >= n {
+			break
+		}
+	}
+	return ret
+}
+
 func (r *Regexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
 	rs, ls, err := bytesToRuneArray(b)
 	if err != nil {

@@ -240,9 +240,9 @@ func TestFindAllSubmatchIndex(t *testing.T) {
 	for _, doString := range []bool{true, false} {
 		var methodName string
 		if doString {
-			methodName = "FindAllStringIndex"
+			methodName = "FindAllStringSubmatchIndex"
 		} else {
-			methodName = "FindAllIndex"
+			methodName = "FindAllSubmatcnIndex"
 		}
 
 		for n := -1; n < 4; n++ {
@@ -266,3 +266,48 @@ func TestFindAllSubmatchIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestFindAllSubmatch(t *testing.T) {
+	pattern := `(\S+):(\S+)`
+	gore, err := regexp.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (Go)") {
+		return
+	}
+
+	re, err := pcre2.Compile(pattern)
+	if !assert.NoError(t, err, "Compile works (pcre2)") {
+		return
+	}
+	defer re.Free()
+
+	data := []string{`Alice:35 Bob:42 Charlie:21`, `桃:三年 栗:三年 柿:八年`, `vini:came vidi:saw vici:won`}
+	for _, doString := range []bool{true, false} {
+		var methodName string
+		if doString {
+			methodName = "FindAllStringSubmatch"
+		} else {
+			methodName = "FindAllSubmatcn"
+		}
+
+		for n := -1; n < 4; n++ {
+			var expected interface{}
+			var ret interface{}
+
+			for _, subject := range data {
+				t.Logf(`%s("%s", %d)`, methodName, subject, n)
+				if doString {
+					expected = gore.FindAllStringSubmatch(subject, n)
+					ret = re.FindAllStringSubmatch(subject, n)
+				} else {
+					expected = gore.FindAllSubmatch([]byte(subject), n)
+					ret = re.FindAllSubmatch([]byte(subject), n)
+				}
+
+				if !assert.Equal(t, expected, ret, "indices should match") {
+					return
+				}
+			}
+		}
+	}
+}
+
