@@ -1,3 +1,11 @@
+/*
+Package pcre2 is a wrapper around PCRE2 C library. This library aims to
+provide compatible API as that of regexp package from Go stdlib.
+
+Note that while PCRE2 provides support for 8, 16, and 32 bit inputs,
+this library assumes UTF-8 (32bit) input. Therefore if you use anything
+other than UTF-8, matches will not succeed.
+*/
 package pcre2
 
 /*
@@ -26,21 +34,29 @@ import (
 	"unsafe"
 )
 
+// Regexp represents a compiled regular expression. Internally
+// it wraps a reference to `pcre2_code` type.
 type Regexp struct {
 	ptr uintptr // *C.pcre2_code
 }
 
 var (
-	ErrInvalidRegexp     = errors.New("invalid regexp")
+	// ErrInvalidRegexp is returned when the provided Regexp is
+	// not backed by a proper C pointer to pcre2_code
+	ErrInvalidRegexp = errors.New("invalid regexp")
+	// ErrInvalidUTF8String is returned when the input string cannot
+	// be decoded into runes
 	ErrInvalidUTF8String = errors.New("invalid utf8 string")
 )
 
+// ErrCompile is returned when compiling the regular expression fails.
 type ErrCompile struct {
 	message string
 	offset  int
 	pattern string
 }
 
+// Error returns the string representation of the error.
 func (e ErrCompile) Error() string {
 	return fmt.Sprintf("PCRE2 compilation failed at offset %d: %s", e.offset, e.message)
 }
@@ -75,6 +91,8 @@ func bytesToRuneArray(b []byte) ([]rune, []int, error) {
 	return rs, ls, nil
 }
 
+// Compile takes the input string and creates a compiled Regexp object.
+// Regexp objects created by Compile must be released by calling Free
 func Compile(pattern string) (*Regexp, error) {
 	patc, _, err := strToRuneArray(pattern)
 	if err != nil {
@@ -116,6 +134,7 @@ func (r *Regexp) validRegexpPtr() (*C.pcre2_code, error) {
 	return nil, ErrInvalidRegexp
 }
 
+// Free releases the underlying C resources
 func (r *Regexp) Free() error {
 	rptr, err := r.validRegexpPtr()
 	if err != nil {
@@ -271,21 +290,21 @@ func (r *Regexp) FindStringSubmatchIndex(s string) []int {
 }
 
 func (r *Regexp) findSubmatchIndex(rs []rune, ls []int) []int {
-  rptr, err := r.validRegexpPtr()
-  if err != nil {
-    return nil
-  }
+	rptr, err := r.validRegexpPtr()
+	if err != nil {
+		return nil
+	}
 
-  matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
-  defer C.pcre2_match_data_free(matchData)
+	matchData := C.pcre2_match_data_create_from_pattern(rptr, nil)
+	defer C.pcre2_match_data_free(matchData)
 
-  out := []int(nil)
-  options := 0
+	out := []int(nil)
+	options := 0
 
-  count := r.matchRuneArray(rs, 0, options, matchData)
+	count := r.matchRuneArray(rs, 0, options, matchData)
 	if count <= 0 {
 		return nil
-  }
+	}
 
 	ovector := pcre2GetOvectorPointer(matchData, count)
 	for i := 0; i < count; i++ {
@@ -313,7 +332,7 @@ func (r *Regexp) FindStringSubmatch(s string) []string {
 	}
 
 	ret := make([]string, 0, len(matches))
-	for i := 0; i < len(matches) / 2; i++ {
+	for i := 0; i < len(matches)/2; i++ {
 		ret = append(ret, s[matches[2*i]:matches[2*i+1]])
 	}
 	return ret
