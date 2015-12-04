@@ -27,7 +27,7 @@ import (
 )
 
 type Regexp struct {
-	ptr *C.pcre2_code
+	ptr uintptr // *C.pcre2_code
 }
 
 var (
@@ -102,7 +102,7 @@ func Compile(pattern string) (*Regexp, error) {
 			message: string(msg),
 		}
 	}
-	return &Regexp{ptr: re}, nil
+	return &Regexp{ptr: uintptr(unsafe.Pointer(re))}, nil
 }
 
 func (r *Regexp) validRegexpPtr() (*C.pcre2_code, error) {
@@ -110,11 +110,10 @@ func (r *Regexp) validRegexpPtr() (*C.pcre2_code, error) {
 		return nil, ErrInvalidRegexp
 	}
 
-	rptr := r.ptr
-	if r.ptr == nil {
-		return nil, ErrInvalidRegexp
+	if rptr := r.ptr; rptr != 0 {
+		return (*C.pcre2_code)(unsafe.Pointer(rptr)), nil
 	}
-	return rptr, nil
+	return nil, ErrInvalidRegexp
 }
 
 func (r *Regexp) Free() error {
@@ -123,6 +122,7 @@ func (r *Regexp) Free() error {
 		return err
 	}
 	C.pcre2_code_free(rptr)
+	r.ptr = 0
 	return nil
 }
 
