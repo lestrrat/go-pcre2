@@ -27,34 +27,11 @@ MY_pcre2_get_error_message(int errnum) {
 */
 import "C"
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"unicode/utf8"
 	"unsafe"
 )
-
-// Regexp represents a compiled regular expression. Internally
-// it wraps a reference to `pcre2_code` type.
-type Regexp struct {
-	ptr uintptr // *C.pcre2_code
-}
-
-var (
-	// ErrInvalidRegexp is returned when the provided Regexp is
-	// not backed by a proper C pointer to pcre2_code
-	ErrInvalidRegexp = errors.New("invalid regexp")
-	// ErrInvalidUTF8String is returned when the input string cannot
-	// be decoded into runes
-	ErrInvalidUTF8String = errors.New("invalid utf8 string")
-)
-
-// ErrCompile is returned when compiling the regular expression fails.
-type ErrCompile struct {
-	message string
-	offset  int
-	pattern string
-}
 
 // Error returns the string representation of the error.
 func (e ErrCompile) Error() string {
@@ -120,7 +97,20 @@ func Compile(pattern string) (*Regexp, error) {
 			message: string(msg),
 		}
 	}
-	return &Regexp{ptr: uintptr(unsafe.Pointer(re))}, nil
+	return &Regexp{
+		pattern: pattern,
+		ptr:     uintptr(unsafe.Pointer(re)),
+	}, nil
+}
+
+// MustCompile is like Compile but panics if the expression cannot be
+// parsed.
+func MustCompile(pattern string) *Regexp {
+	r, err := Compile(pattern)
+	if err != nil {
+		panic(err)
+	}
+	return r
 }
 
 func (r *Regexp) validRegexpPtr() (*C.pcre2_code, error) {
@@ -143,6 +133,11 @@ func (r *Regexp) Free() error {
 	C.pcre2_code_free(rptr)
 	r.ptr = 0
 	return nil
+}
+
+// String returns the source text used to compile the regular expression.
+func (r Regexp) String() string {
+	return r.pattern
 }
 
 func (r *Regexp) Match(b []byte) bool {
